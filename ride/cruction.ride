@@ -38,7 +38,7 @@ func bid(auctionId: String) = {
     let bidFromTheSameUser = isDefined(highestBidder) && (value(highestBidder) == callerAddress)
     let totalBidAmount = pmt.amount + if bidFromTheSameUser then value(highestBidAmt) else 0
     if (!isDefined(getString(this, auctionId))) then
-        throw("Auction Id not found") 
+        throw("Invalid auction Id") 
     else{ 
         if (lastBlock.height >= endTime) then 
             throw("Auction Completed") 
@@ -83,8 +83,8 @@ func ownerWithdraw(auctionId: String) = {
     let highestBidAmt = getInteger(this, auctionId + "_highestBidAmt")
     let ownerAddr = addressFromStringValue(owner)
     let itemAddr = fromBase58String(itemId)
-    if (callerAddress != owner ) then 
-        throw("Access Denied")
+    if (callerAddress != owner || !isDefined(getString(this,auctionId)) ) then 
+        throw(if (!isDefined(getString(this,auctionId))) then "Invalid auction Id" else "Access Denied")
     else{
         if (lastBlock.height < endTime) then 
             throw("Auction is still running") 
@@ -124,8 +124,8 @@ func winnerWithdraw(auctionId: String) = {
     let highestBidderAddr = addressFromStringValue(value(highestBidder))
     let ownerAddr = addressFromStringValue(owner)
     let itemAddr = fromBase58String(itemId)
-    if (callerAddress != if (isDefined(highestBidder)) then value(highestBidder) else throw("Nobody won this item") ) then 
-        throw("Access Denied")
+    if ((callerAddress != if (isDefined(highestBidder)) then value(highestBidder) else throw("Nobody won this item")) || !isDefined(getString(this,auctionId))  ) then 
+        throw(if (!isDefined(getString(this,auctionId))) then "Invalid auction Id" else "Access Denied")
     else{
         if (lastBlock.height < endTime) then 
             throw("Auction is still running") 
