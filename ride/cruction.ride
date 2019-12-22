@@ -1,0 +1,145 @@
+{-# STDLIB_VERSION 3 #-}
+{-# CONTENT_TYPE DAPP #-}
+{-# SCRIPT_TYPE ACCOUNT #-}
+let auctionDuration = 1440 * 1 
+# Auction duration set for 1 day
+@Callable(i)
+func registration(userName: String) = {
+    WriteSet([
+        DataEntry( i.caller.bytes.toBase58String(),userName)
+    ])
+} 
+@Callable(i)
+func beginAuction(minPrice: Int, duration: Int) = {
+    if (duration > auctionDuration) then 
+        throw("Specified duration(" + toString(duration) +") exceeds the maximum duration(" + toString(auctionDuration) +")") 
+    else {  
+           let auctionId = toBase58String(i.transactionId)
+           let endTime = lastBlock.height + duration
+           let pmt = extract(i.payment)
+           WriteSet( 
+            [   
+                DataEntry(auctionId, auctionId),
+                DataEntry(auctionId + "_endTime", endTime), 
+                DataEntry(auctionId + "_owner", i.caller.bytes.toBase58String()), 
+                DataEntry(auctionId + "_itemId", if (isDefined(pmt.assetId)) then toBase58String(value(pmt.assetId)) else throw("Item not atached")),
+                DataEntry(auctionId + "_minPrice", minPrice)
+            ])
+    }
+} 
+@Callable(i)
+func bid(auctionId: String) = {
+    let pmt = extract(i.payment)
+    let callerAddress = i.caller.bytes.toBase58String()
+    let endTime = getIntegerValue(this, auctionId + "_endTime")
+    let minPrice = getIntegerValue(this, auctionId + "_minPrice")
+    let highestBidAmt = getInteger(this, auctionId + "_highestBidAmt")
+    let highestBidder = getString(this, auctionId + "_highestBidder")
+    let bidFromTheSameUser = isDefined(highestBidder) && (value(highestBidder) == callerAddress)
+    let totalBidAmount = pmt.amount + if bidFromTheSameUser then value(highestBidAmt) else 0
+    if (!isDefined(getString(this, auctionId))) then
+        throw("Auction Id not found") 
+    else{ 
+        if (lastBlock.height >= endTime) then 
+            throw("Auction Completed") 
+        else{
+            if ((!isDefined(highestBidAmt) && totalBidAmount <= minPrice) || (isDefined(highestBidAmt) && totalBidAmount <= value(highestBidAmt))) then 
+                throw("Bid must be more then " + if (!isDefined(highestBidAmt)) then toString(minPrice) else toString(value(highestBidAmt) ) )
+            else{
+                if (!isDefined(highestBidder)) then
+                    WriteSet([
+                        DataEntry(auctionId + "_highestBidder", callerAddress),
+                        DataEntry(auctionId + "_highestBidAmt", totalBidAmount)
+                    ])
+                else {
+                    if (bidFromTheSameUser) then
+                        WriteSet([
+                            DataEntry(auctionId + "_highestBidAmt", totalBidAmount)
+                        ])
+                    else {
+                        let previousBidder = addressFromStringValue(value(highestBidder))
+                        ScriptResult(
+                            WriteSet([
+                                DataEntry(auctionId + "_highestBidder", callerAddress),
+                                DataEntry(auctionId + "_highestBidAmt", totalBidAmount)
+                            ]),
+                            TransferSet([
+                                ScriptTransfer(previousBidder, value(highestBidAmt), unit)
+                             ])
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+@Callable(i)
+func ownerWithdraw(auctionId: String) = {
+    let callerAddress = i.caller.bytes.toBase58String()
+    let endTime = getIntegerValue(this, auctionId + "_endTime")
+    let owner = getStringValue(this, auctionId + "_owner")
+    let highestBidder = getString(this, auctionId + "_highestBidder")
+    let itemId = getStringValue(this, auctionId + "_itemId") 
+    let highestBidAmt = getInteger(this, auctionId + "_highestBidAmt")
+    let ownerAddr = addressFromStringValue(owner)
+    let itemAddr = fromBase58String(itemId)
+    if (callerAddress != owner ) then 
+        throw("Access Denied")
+    else{
+        if (lastBlock.height < endTime) then 
+            throw("Auction is still running") 
+        else{
+            if (!isDefined(highestBidder)) then
+                if(isDefined(getBoolean(this,auctionId + "_ownerWithdrawStatus"))) then
+                    throw("Item already withdrawn")
+                else{
+                    ScriptResult(
+                        WriteSet([DataEntry(auctionId + "_ownerWithdrawStatus", true)]),
+                        TransferSet([ScriptTransfer(ownerAddr, 1, itemAddr)])
+                    )
+                }
+            else {
+                if (isDefined(getBoolean(this, auctionId + "_ownerWithdrawStatus"))) then
+                    throw("The bid amount is already transfered")
+                else{
+                    ScriptResult(
+                        WriteSet([DataEntry(auctionId + "_ownerWithdrawStatus", true)]),
+                        TransferSet([
+                            ScriptTransfer(ownerAddr, (value(highestBidAmt) / 100) * 95, unit)
+                        ])
+                    )
+                }
+            }
+        }
+    }
+}
+@Callable(i)
+func winnerWithdraw(auctionId: String) = {
+    let callerAddress = i.caller.bytes.toBase58String()
+    let endTime = getIntegerValue(this, auctionId + "_endTime")
+    let owner = getStringValue(this, auctionId + "_owner")
+    let highestBidder = getString(this, auctionId + "_highestBidder")
+    let itemId = getStringValue(this, auctionId + "_itemId") 
+    let highestBidAmt = getInteger(this, auctionId + "_highestBidAmt")
+    let highestBidderAddr = addressFromStringValue(value(highestBidder))
+    let ownerAddr = addressFromStringValue(owner)
+    let itemAddr = fromBase58String(itemId)
+    if (callerAddress != if (isDefined(highestBidder)) then value(highestBidder) else throw("Nobody won this item") ) then 
+        throw("Access Denied")
+    else{
+        if (lastBlock.height < endTime) then 
+            throw("Auction is still running") 
+        else{
+            if (isDefined(getBoolean(this, auctionId + "_winnerWithdrawStatus"))) then
+              throw("The item already transfered")
+            else{
+                ScriptResult(
+                    WriteSet([DataEntry(auctionId + "_winnerWithdrawStatus", true)]),
+                    TransferSet([
+                        ScriptTransfer(highestBidderAddr, 1, itemAddr)
+                    ])
+                )
+            }
+        }
+    }
+}
