@@ -77,11 +77,11 @@ func bid(auctionId: String) = {
 func ownerWithdraw(auctionId: String) = {
     let callerAddress = i.caller.bytes.toBase58String()
     let endTime = getIntegerValue(this, auctionId + "_endTime")
-    let owner = getStringValue(this, auctionId + "_owner")
+    let owner = getString(this, auctionId + "_owner")
     let highestBidder = getString(this, auctionId + "_highestBidder")
     let itemId = getStringValue(this, auctionId + "_itemId") 
     let highestBidAmt = getInteger(this, auctionId + "_highestBidAmt")
-    let ownerAddr = addressFromStringValue(owner)
+    let ownerAddr = addressFromStringValue(value(owner))
     let itemAddr = fromBase58String(itemId)
     if (callerAddress != owner || !isDefined(getString(this,auctionId)) ) then 
         throw(if (!isDefined(getString(this,auctionId))) then "Invalid auction Id" else "Access Denied")

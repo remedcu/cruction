@@ -1,4 +1,12 @@
 const wvs = 10 ** 8;
+const waitTime = 11; // This is in seconds, change it according to block time.
+
+let NFT_AssetId = "";
+let auctionId = "";
+
+function wait(seconds) {
+    return new Promise((resolve, reject) => setTimeout(resolve, seconds*1000));
+  } 
 
 describe('Owner withdraw Testing', async function () {
 
@@ -26,9 +34,9 @@ describe('Owner withdraw Testing', async function () {
             var NFT_Asset = issue({ name: "NFT_Item", description: "", quantity: 1, decimals: 0, reissuable: false }, accounts.sellerOne);
             await broadcast(NFT_Asset);
             await waitForTx(NFT_Asset.id);
-            let NFT_AssetId = NFT_Asset.id;
+            NFT_AssetId = NFT_Asset.id;
 
-            let ts = invokeScript({
+            let ts1 = invokeScript({
                 dApp: address(accounts.dappAddress),
                 call: {
                     function: "beginAuction",
@@ -41,11 +49,12 @@ describe('Owner withdraw Testing', async function () {
                 fee: 500000
 
             }, accounts.sellerOne);
-            let tx = await broadcast(ts);
-            await waitForTx(tx.id);
-            let auctionId = await accountDataByKey(tx.id, address(accounts.dappAddress));
+            let tx1 = await broadcast(ts1);
+            await waitForTx(tx1.id);
+            auctionId = await accountDataByKey(tx1.id, address(accounts.dappAddress));
+            auctionId = auctionId.value;
 
-            let ts = invokeScript({
+            let ts2 = invokeScript({
                 dApp: address(accounts.dappAddress),
                     call:{
                         function:"bid",
@@ -57,16 +66,16 @@ describe('Owner withdraw Testing', async function () {
                     fee: 500000
     
             }, accounts.buyerOne);
-            let tx = await broadcast(ts);
-            await waitForTx(tx.id);
+            let tx2 = await broadcast(ts2);
+            await waitForTx(tx2.id);
 
         });
 
         it("Owner withdraw", async function ()  {
 
-            //since auction duration is 1 min(6000ms)
-            this.timeout("6001")
-
+            console.log("Waiting for auction to complete");
+            //since auction duration is 1 min(60 sec)
+            await wait(waitTime);
 
             let ts = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -98,8 +107,7 @@ describe('Owner withdraw Testing', async function () {
                     fee:500000
 
             },accounts.sellerOne);
-            let tx = await broadcast(ts);
-            await waitForTx(tx.id);
+            await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Auction is still running");
         });
 
         it("Unauthorised access", async function ()  {
@@ -116,8 +124,7 @@ describe('Owner withdraw Testing', async function () {
                     fee:500000
 
             },accounts.sellerTwo);
-            let tx = await broadcast(ts);
-            await waitForTx(tx.id);
+            await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Access Denied");
         });
 
         it("Invalid auction Id", async function ()  {
@@ -134,15 +141,14 @@ describe('Owner withdraw Testing', async function () {
                     fee:500000
 
             },accounts.sellerOne);
-            let tx = await broadcast(ts);
-            await waitForTx(tx.id);
+            await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Invalid auction Id");
         });
 
         it("Withdraw amount already withrawn", async function ()  {
 
-            //since auction duration is 1 min(6000ms)
-            this.timeout("6001")
-
+            console.log("Waiting for auction to complete");
+            //since auction duration is 1 min(60 sec)
+            await wait(waitTime);
 
             let ts1 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -171,8 +177,7 @@ describe('Owner withdraw Testing', async function () {
                     fee:500000
 
             },accounts.sellerOne);
-            let tx2 = await broadcast(ts2);
-            await waitForTx(tx2.id);
+            await expect(broadcast(ts2)).rejectedWith("Error while executing account-script: The bid amount is already transfered");
         });
         
     });
@@ -182,7 +187,7 @@ describe('Owner withdraw Testing', async function () {
             var NFT_Asset = issue({ name: "NFT_Item", description: "", quantity: 1, decimals: 0, reissuable: false }, accounts.sellerOne);
             await broadcast(NFT_Asset);
             await waitForTx(NFT_Asset.id);
-            let NFT_AssetId = NFT_Asset.id;
+            NFT_AssetId = NFT_Asset.id;
 
             let ts = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -199,14 +204,17 @@ describe('Owner withdraw Testing', async function () {
             }, accounts.sellerOne);
             let tx = await broadcast(ts);
             await waitForTx(tx.id);
-            let auctionId = await accountDataByKey(tx.id, address(accounts.dappAddress));
+            auctionId = await accountDataByKey(tx.id, address(accounts.dappAddress));
+            auctionId = auctionId.value;
 
         });
 
         it("withdraw item back when no bidder", async function ()  {
 
-            //since auction duration is 1 min(6000ms)
-            this.timeout("6001")
+            console.log("Waiting for auction to complete");
+            //since auction duration is 1 min(60 sec)
+            await wait(waitTime);
+
             let ts = invokeScript({
                 dApp: address(accounts.dappAddress),
                     call:{
@@ -225,8 +233,9 @@ describe('Owner withdraw Testing', async function () {
 
         it("withdraw item already withdrawn when no bidder", async function ()  {
 
-            //since auction duration is 1 min(6000ms)
-            this.timeout("6001")
+            console.log("Waiting for auction to complete");
+            //since auction duration is 1 min(60 sec)
+            await wait(waitTime);
 
             let ts1 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -255,8 +264,7 @@ describe('Owner withdraw Testing', async function () {
                     fee:500000
 
             },accounts.sellerOne);
-            let tx2 = await broadcast(ts2);
-            await waitForTx(tx2.id);
+            await expect(broadcast(ts2)).rejectedWith("Error while executing account-script: Item already withdrawn");
 
         });
 

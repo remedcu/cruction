@@ -60,8 +60,7 @@ describe('BeginAuction Testing', async function () {
                 fee: 500000
 
             }, accounts.sellerOne);
-            let tx = await broadcast(ts);
-            await waitForTx(tx.id);
+            await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Specified duration(1441) exceeds the maximum duration(1440)");
         })
 
     });

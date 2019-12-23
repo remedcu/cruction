@@ -1,4 +1,11 @@
 const wvs = 10 ** 8;
+const waitTime = 15; // This is in seconds, change it according to block time.
+
+let NFT_AssetId = ""
+
+function wait(seconds) {
+    return new Promise((resolve, reject) => setTimeout(resolve, seconds*1000));
+  }  
 
 describe('Bid Testing', async function () {
 
@@ -26,7 +33,7 @@ describe('Bid Testing', async function () {
             var NFT_Asset = issue({ name: "NFT_Item", description: "", quantity: 1, decimals: 0, reissuable: false }, accounts.sellerOne);
             await broadcast(NFT_Asset);
             await waitForTx(NFT_Asset.id);
-            let NFT_AssetId = NFT_Asset.id;
+            NFT_AssetId = NFT_Asset.id;
         });
 
         
@@ -48,6 +55,7 @@ describe('Bid Testing', async function () {
             let tx1 = await broadcast(ts1);
             await waitForTx(tx1.id);
             let auctionId = await accountDataByKey(tx1.id, address(accounts.dappAddress));
+            auctionId = auctionId.value;
 
             let ts2 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -82,11 +90,10 @@ describe('Bid Testing', async function () {
                     fee: 500000
     
             }, accounts.buyerOne);
-            let tx = await broadcast(ts);
-            await waitForTx(tx.id);
+            await broadcast(ts);
         })
 
-        it("Placing a bid after acution", async function ()  {
+        it("Placing a bid after auction", async function ()  {
 
             let ts1 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -104,10 +111,11 @@ describe('Bid Testing', async function () {
             let tx1 = await broadcast(ts1);
             await waitForTx(tx1.id);
             let auctionId = await accountDataByKey(tx1.id, address(accounts.dappAddress));
+            auctionId = auctionId.value;
 
-            //since auction duration is 1 min(6000ms)
-            this.timeout("6001");
-
+            console.log("Waiting for auction to complete");
+            //since auction duration is 1 min(60 sec)
+            await wait(waitTime);
             let ts2 = invokeScript({
                 dApp: address(accounts.dappAddress),
                     call:{
@@ -120,8 +128,7 @@ describe('Bid Testing', async function () {
                     fee: 500000
     
             }, accounts.buyerOne);
-            let tx2 = await broadcast(ts2);
-            await waitForTx(tx2.id);
+            await expect(broadcast(ts2)).rejectedWith("Error while executing account-script: Auction Completed");
         })
 
         it("Placing a bid lesser than min price", async function ()  {
@@ -142,6 +149,7 @@ describe('Bid Testing', async function () {
             let tx1 = await broadcast(ts1);
             await waitForTx(tx1.id);
             let auctionId = await accountDataByKey(tx1.id, address(accounts.dappAddress));
+            auctionId = auctionId.value;
 
             let ts2 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -155,8 +163,7 @@ describe('Bid Testing', async function () {
                     fee: 500000
     
             }, accounts.buyerOne);
-            let tx2 = await broadcast(ts2);
-            await waitForTx(tx2.id);
+            await expect(broadcast(ts2)).rejectedWith("Error while executing account-script: Bid must be more then 10000000");
         })
 
         it("Placing a bid lesser than highet bid amount", async function ()  {
@@ -177,6 +184,7 @@ describe('Bid Testing', async function () {
             let tx1 = await broadcast(ts1);
             await waitForTx(tx1.id);
             let auctionId = await accountDataByKey(tx1.id, address(accounts.dappAddress));
+            auctionId = auctionId.value;
 
             let ts2 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -205,8 +213,7 @@ describe('Bid Testing', async function () {
                     fee: 500000
     
             }, accounts.buyerTwo);
-            let tx3 = await broadcast(ts3);
-            await waitForTx(tx3.id);
+            await expect(broadcast(ts3)).rejectedWith("Error while executing account-script: Bid must be more then 200000000");
         })
         
         it("Placing a bid by same user ", async function ()  {
@@ -227,6 +234,7 @@ describe('Bid Testing', async function () {
             let tx1 = await broadcast(ts1);
             await waitForTx(tx1.id);
             let auctionId = await accountDataByKey(tx1.id, address(accounts.dappAddress));
+            auctionId = auctionId.value;
 
             let ts2 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -277,6 +285,7 @@ describe('Bid Testing', async function () {
             let tx1 = await broadcast(ts1);
             await waitForTx(tx1.id);
             let auctionId = await accountDataByKey(tx1.id, address(accounts.dappAddress));
+            auctionId = auctionId.value;
 
             let ts2 = invokeScript({
                 dApp: address(accounts.dappAddress),

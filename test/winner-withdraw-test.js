@@ -1,4 +1,11 @@
 const wvs = 10 ** 8;
+const waitTime = 11; // This is in seconds, change it according to block time.
+
+let NFT_AssetId = ""
+
+function wait(seconds) {
+    return new Promise((resolve, reject) => setTimeout(resolve, seconds*1000));
+  } 
 
 describe('Winner withdraw Testing', async function () {
 
