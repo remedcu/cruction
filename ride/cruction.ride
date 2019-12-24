@@ -124,22 +124,26 @@ func winnerWithdraw(auctionId: String) = {
     let highestBidderAddr = addressFromStringValue(value(highestBidder))
     let ownerAddr = addressFromStringValue(owner)
     let itemAddr = fromBase58String(itemId)
-    if ((callerAddress != if (isDefined(highestBidder)) then value(highestBidder) else throw("Nobody won this item")) || !isDefined(getString(this,auctionId))  ) then 
-        throw(if (!isDefined(getString(this,auctionId))) then "Invalid auction Id" else "Access Denied")
-    else{
-        if (lastBlock.height < endTime) then 
-            throw("Auction is still running") 
+    if (!isDefined(getString(this,auctionId))) 
+        then throw("Invalid auction Id") 
+    else{ 
+        if ((callerAddress != if (isDefined(highestBidder)) then value(highestBidder) else throw("Nobody won this item"))  ) then 
+            throw("Access Denied")
         else{
-            if (isDefined(getBoolean(this, auctionId + "_winnerWithdrawStatus"))) then
-              throw("The item already transfered")
+            if (lastBlock.height < endTime) then 
+                throw("Auction is still running") 
             else{
-                ScriptResult(
-                    WriteSet([DataEntry(auctionId + "_winnerWithdrawStatus", true)]),
-                    TransferSet([
-                        ScriptTransfer(highestBidderAddr, 1, itemAddr)
-                    ])
-                )
+                if (isDefined(getBoolean(this, auctionId + "_winnerWithdrawStatus"))) then
+                throw("The item already transfered")
+                else{
+                    ScriptResult(
+                        WriteSet([DataEntry(auctionId + "_winnerWithdrawStatus", true)]),
+                        TransferSet([
+                            ScriptTransfer(highestBidderAddr, 1, itemAddr)
+                        ])
+                    )
+                }
             }
         }
-    }
+    }    
 }

@@ -1,5 +1,5 @@
 const wvs = 10 ** 8;
-const waitTime = 11; // This is in seconds, change it according to block time.
+const waitTime = 15; // This is in seconds, change it according to block time.
 
 let NFT_AssetId = "";
 let auctionId = "";

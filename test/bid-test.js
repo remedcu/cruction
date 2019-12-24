@@ -90,7 +90,7 @@ describe('Bid Testing', async function () {
                     fee: 500000
     
             }, accounts.buyerOne);
-            await broadcast(ts);
+            await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Invalid auction Id");
         })
 
         it("Placing a bid after auction", async function ()  {
