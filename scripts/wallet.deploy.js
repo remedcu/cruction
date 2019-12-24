@@ -3,7 +3,7 @@
 // wrap out script with async function to use fancy async/await syntax
 (async () => {
     // Functions, available in tests, also available here
-    const script = compile(file('wallet.ride'));
+    const script = compile(file('cruction.ride'));
 
     // You can set env varibles via cli arguments. E.g.: `surfboard run path/to/script  --variables 'dappSeed=seed phrase,secondVariable=200'`
     const dappSeed = env.dappSeed;
