@@ -1,8 +1,8 @@
 {-# STDLIB_VERSION 3 #-}
 {-# CONTENT_TYPE DAPP #-}
 {-# SCRIPT_TYPE ACCOUNT #-}
-let auctionDuration = 1440 * 1 
-# Auction duration set for 1 day
+let auctionDuration = 1440 * 30 
+# Maximum auction duration set for 30 days
 @Callable(i)
 func registration(userName: String) = {
     WriteSet([
@@ -35,8 +35,8 @@ func bid(auctionId: String) = {
     let minPrice = getIntegerValue(this, auctionId + "_minPrice")
     let highestBidAmt = getInteger(this, auctionId + "_highestBidAmt")
     let highestBidder = getString(this, auctionId + "_highestBidder")
-    let bidFromTheSameUser = isDefined(highestBidder) && (value(highestBidder) == callerAddress)
-    let totalBidAmount = pmt.amount + if bidFromTheSameUser then value(highestBidAmt) else 0
+    let thisAuctionFrozenBalance = getInteger(this, auctionId + callerAddress + "_frozenBalance")
+    let totalBidAmount = pmt.amount + if(isDefined(thisAuctionFrozenBalance)) then value(thisAuctionFrozenBalance) else 0
     if (!isDefined(getString(this, auctionId))) then
         throw("Invalid auction Id") 
     else{ 
@@ -46,29 +46,11 @@ func bid(auctionId: String) = {
             if ((!isDefined(highestBidAmt) && totalBidAmount <= minPrice) || (isDefined(highestBidAmt) && totalBidAmount <= value(highestBidAmt))) then 
                 throw("Bid must be more then " + if (!isDefined(highestBidAmt)) then toString(minPrice) else toString(value(highestBidAmt) ) )
             else{
-                if (!isDefined(highestBidder)) then
-                    WriteSet([
-                        DataEntry(auctionId + "_highestBidder", callerAddress),
-                        DataEntry(auctionId + "_highestBidAmt", totalBidAmount)
-                    ])
-                else {
-                    if (bidFromTheSameUser) then
-                        WriteSet([
-                            DataEntry(auctionId + "_highestBidAmt", totalBidAmount)
-                        ])
-                    else {
-                        let previousBidder = addressFromStringValue(value(highestBidder))
-                        ScriptResult(
-                            WriteSet([
-                                DataEntry(auctionId + "_highestBidder", callerAddress),
-                                DataEntry(auctionId + "_highestBidAmt", totalBidAmount)
-                            ]),
-                            TransferSet([
-                                ScriptTransfer(previousBidder, value(highestBidAmt), unit)
-                             ])
-                        )
-                    }
-                }
+                 WriteSet([
+                    DataEntry(auctionId + "_highestBidder", callerAddress),
+                    DataEntry(auctionId + "_highestBidAmt", totalBidAmount),
+                    DataEntry(auctionId + callerAddress + "_frozenBalance",totalBidAmount)
+                ])
             }
         }
     }
@@ -117,12 +99,10 @@ func ownerWithdraw(auctionId: String) = {
 func winnerWithdraw(auctionId: String) = {
     let callerAddress = i.caller.bytes.toBase58String()
     let endTime = getIntegerValue(this, auctionId + "_endTime")
-    let owner = getStringValue(this, auctionId + "_owner")
     let highestBidder = getString(this, auctionId + "_highestBidder")
     let itemId = getStringValue(this, auctionId + "_itemId") 
     let highestBidAmt = getInteger(this, auctionId + "_highestBidAmt")
     let highestBidderAddr = addressFromStringValue(value(highestBidder))
-    let ownerAddr = addressFromStringValue(owner)
     let itemAddr = fromBase58String(itemId)
     if (!isDefined(getString(this,auctionId))) 
         then throw("Invalid auction Id") 
@@ -142,6 +122,37 @@ func winnerWithdraw(auctionId: String) = {
                             ScriptTransfer(highestBidderAddr, 1, itemAddr)
                         ])
                     )
+                }
+            }
+        }
+    }    
+}
+@Callable(i)
+func participantWithdraw(auctionId: String) = {
+    let callerAddress = i.caller.bytes.toBase58String()
+    let endTime = getIntegerValue(this, auctionId + "_endTime")
+    let highestBidder = getString(this, auctionId + "_highestBidder")
+    let thisAuctionFrozenBalance = getInteger(this, auctionId + callerAddress + "_frozenBalance")
+    if (!isDefined(getString(this,auctionId))) 
+        then throw("Invalid auction Id") 
+    else{ 
+        if (lastBlock.height < endTime) then 
+                throw("Auction is still running")
+        else{
+           if (callerAddress == if (isDefined(highestBidder)) then value(highestBidder) else 0 ) then 
+                throw("Winner can't withdraw the frozen balance")
+            else{
+                if(!isDefined(thisAuctionFrozenBalance) || (thisAuctionFrozenBalance == 0)) then 
+                    throw("No Balance")
+                else{
+                    ScriptResult(
+                        WriteSet(
+                            [DataEntry(auctionId + "_winnerWithdrawStatus", true), 
+                            DataEntry(auctionId + callerAddress + "_frozenBalance",0)]),
+                        TransferSet([
+                                ScriptTransfer( addressFromStringValue(callerAddress),value(thisAuctionFrozenBalance), unit)
+                            ])
+                        )
                 }
             }
         }
