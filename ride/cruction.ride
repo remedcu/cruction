@@ -95,6 +95,7 @@ func ownerWithdraw(auctionId: String) = {
         }
     }
 }
+
 @Callable(i)
 func winnerWithdraw(auctionId: String) = {
     let callerAddress = i.caller.bytes.toBase58String()
@@ -107,8 +108,8 @@ func winnerWithdraw(auctionId: String) = {
     if (!isDefined(getString(this,auctionId))) 
         then throw("Invalid auction Id") 
     else{ 
-        if ((callerAddress != if (isDefined(highestBidder)) then value(highestBidder) else throw("Nobody won this item"))  ) then 
-            throw("Access Denied")
+        if ((callerAddress != if (isDefined(highestBidder)) then value(highestBidder) else throw("Nobody won this item"))  ) 
+            then throw("Access Denied")
         else{
             if (lastBlock.height < endTime) then 
                 throw("Auction is still running") 
@@ -127,6 +128,7 @@ func winnerWithdraw(auctionId: String) = {
         }
     }    
 }
+
 @Callable(i)
 func participantWithdraw(auctionId: String) = {
     let callerAddress = i.caller.bytes.toBase58String()
@@ -147,8 +149,7 @@ func participantWithdraw(auctionId: String) = {
                 else{
                     ScriptResult(
                         WriteSet(
-                            [DataEntry(auctionId + "_winnerWithdrawStatus", true), 
-                            DataEntry(auctionId + callerAddress + "_frozenBalance",0)]),
+                            [DataEntry(auctionId + callerAddress + "_frozenBalance",0)]),
                         TransferSet([
                                 ScriptTransfer( addressFromStringValue(callerAddress),value(thisAuctionFrozenBalance), unit)
                             ])

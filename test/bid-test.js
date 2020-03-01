@@ -74,7 +74,7 @@ describe('Bid Testing', async function () {
         })
 
 
-        it("Placing bid using invalid auction ID", async function ()  {
+        it("Prevent placing a bid using invalid auction ID", async function ()  {
 
             let auctionId = "foofoffoofofofoffofofoffoo"
 
@@ -93,7 +93,7 @@ describe('Bid Testing', async function () {
             await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Invalid auction Id");
         })
 
-        it("Placing a bid after auction", async function ()  {
+        it("Prevent placing a bid after auction", async function ()  {
 
             let ts1 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -131,7 +131,7 @@ describe('Bid Testing', async function () {
             await expect(broadcast(ts2)).rejectedWith("Error while executing account-script: Auction Completed");
         })
 
-        it("Placing a bid lesser than min price", async function ()  {
+        it("Prevent placing a bid lesser than min price", async function ()  {
 
             let ts1 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -166,7 +166,7 @@ describe('Bid Testing', async function () {
             await expect(broadcast(ts2)).rejectedWith("Error while executing account-script: Bid must be more then 10000000");
         })
 
-        it("Placing a bid lesser than highet bid amount", async function ()  {
+        it("Prevent placing a bid lesser than highet bid amount", async function ()  {
 
             let ts1 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -216,7 +216,7 @@ describe('Bid Testing', async function () {
             await expect(broadcast(ts3)).rejectedWith("Error while executing account-script: Bid must be more then 200000000");
         })
         
-        it("Placing a bid by same user ", async function ()  {
+        it("Placing a bid by already existing bidder ", async function ()  {
 
             let ts1 = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -244,7 +244,7 @@ describe('Bid Testing', async function () {
                             { type:"string",  value:auctionId }
                         ]
                     },
-                    payment:[{amount:100000000}],
+                    payment:[{amount:200000000}],
                     fee: 500000
     
             }, accounts.buyerOne);
@@ -265,6 +265,8 @@ describe('Bid Testing', async function () {
             }, accounts.buyerOne);
             let tx3 = await broadcast(ts3);
             await waitForTx(tx3.id);
+            let check = await accountDataByKey(auctionId + address(accounts.buyerOne)+"_frozenBalance", address(accounts.dappAddress));
+            expect(check.value).to.equal(300000000);
         })
 
         it("Placing a bid higher than highest bidder ", async function ()  {
