@@ -8,7 +8,7 @@ function wait(seconds) {
     return new Promise((resolve, reject) => setTimeout(resolve, seconds*1000));
   } 
 
-describe('Winner withdraw Testing', async function () {
+describe('Participant withdraw Testing', async function () {
 
     before(async function () {
         await setupAccounts(
@@ -17,6 +17,7 @@ describe('Winner withdraw Testing', async function () {
                 sellerTwo: 10 * wvs,
                 buyerOne: 10 * wvs,
                 buyerTwo: 10 * wvs,
+                buyerThree: 10 * wvs,
                 dappAddress: 10 * wvs
             });
 
@@ -66,19 +67,36 @@ describe('Winner withdraw Testing', async function () {
                             { type:"string",  value:auctionId }
                         ]
                     },
-                    payment:[{amount:100000000}],
+                    payment:[{amount:10000000}],
                     fee: 500000
     
             }, accounts.buyerOne);
             let tx2 = await broadcast(ts2);
             await waitForTx(tx2.id);
 
-            console.log("Bid completed as well");
+            console.log("Bid placed by buyerOne");
+
+            let ts3 = invokeScript({
+                dApp: address(accounts.dappAddress),
+                    call:{
+                        function:"bid",
+                        args:[
+                            { type:"string",  value:auctionId }
+                        ]
+                    },
+                    payment:[{amount:100000000}],
+                    fee: 500000
+    
+            }, accounts.buyerTwo);
+            let tx3 = await broadcast(ts3);
+            await waitForTx(tx3.id);
+
+            console.log("Bid placed by buyerTwo");
 
         });
 
 
-        it("Winner withdraw", async function ()  {
+        it("Participant withdraw", async function ()  {
 
             console.log("Waiting for auction to complete");
             await wait(waitTime);
@@ -87,7 +105,7 @@ describe('Winner withdraw Testing', async function () {
             let ts = invokeScript({
                 dApp: address(accounts.dappAddress),
                     call:{
-                        function:"winnerWithdraw",
+                        function:"participantWithdraw",
                         args:[
                             {type:"string",  value: auctionId }
                         ]
@@ -100,12 +118,12 @@ describe('Winner withdraw Testing', async function () {
             await waitForTx(tx.id);
         });
 
-        it("Prevent winner withdraw before auction ends", async function ()  {
+        it(" Prevent participant withdraw before auction ends", async function ()  {
 
             let ts = invokeScript({
                 dApp: address(accounts.dappAddress),
                     call:{
-                        function:"winnerWithdraw",
+                        function:"participantWithdraw",
                         args:[
                             {type:"string",  value: auctionId }
                         ]
@@ -117,29 +135,13 @@ describe('Winner withdraw Testing', async function () {
             await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Auction is still running");
         });
 
-        it("Prevent unauthorised access", async function ()  {
-
-            let ts = invokeScript({
-                dApp: address(accounts.dappAddress),
-                    call:{
-                        function:"winnerWithdraw",
-                        args:[
-                            {type:"string",  value: auctionId }
-                        ]
-                    },
-                    payment:[],
-                    fee:500000
-
-            },accounts.buyerTwo);
-            await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Access Denied");
-        });
-
+        
         it("Prevent invalid auction Id", async function ()  {
             auctionId = "foofoofooofoofoo"
             let ts = invokeScript({
                 dApp: address(accounts.dappAddress),
                     call:{
-                        function:"winnerWithdraw",
+                        function:"participantWithdraw",
                         args:[
                             {type:"string",  value: auctionId }
                         ]
@@ -160,7 +162,7 @@ describe('Winner withdraw Testing', async function () {
             let ts1 = invokeScript({
                 dApp: address(accounts.dappAddress),
                     call:{
-                        function:"winnerWithdraw",
+                        function:"participantWithdraw",
                         args:[
                             {type:"string",  value: auctionId }
                         ]
@@ -175,7 +177,7 @@ describe('Winner withdraw Testing', async function () {
             let ts2 = invokeScript({
                 dApp: address(accounts.dappAddress),
                     call:{
-                        function:"winnerWithdraw",
+                        function:"participantWithdraw",
                         args:[
                             {type:"string",  value: auctionId }
                         ]
@@ -184,58 +186,9 @@ describe('Winner withdraw Testing', async function () {
                     fee:500000
 
             },accounts.buyerOne);
-            await expect(broadcast(ts2)).rejectedWith("Error while executing account-script: The item already transfered");
+            await expect(broadcast(ts2)).rejectedWith("Error while executing account-script: No Balance");
         });
         
     });
-
-
-    describe('When no one placed a bid', async function() {
-
-        it("Deny withdraw of item nobody had bid", async function ()  {
-
-            var NFT_Asset = issue({ name: "NFT_Item", description: "", quantity: 1, decimals: 0, reissuable: false }, accounts.sellerOne);
-            await broadcast(NFT_Asset);
-            await waitForTx(NFT_Asset.id);
-            NFT_AssetId = NFT_Asset.id;
-
-            let ts1 = invokeScript({
-                dApp: address(accounts.dappAddress),
-                call: {
-                    function: "beginAuction",
-                    args: [
-                        { type: "integer", value: 100000 },
-                        { type: "integer", value: 1 }
-                    ]
-                },
-                payment: [{ amount: 1, assetId: NFT_AssetId }],
-                fee: 500000
-
-            }, accounts.sellerOne);
-            let tx1 = await broadcast(ts1);
-            await waitForTx(tx1.id);
-            auctionId = await accountDataByKey(tx1.id, address(accounts.dappAddress));
-            auctionId = auctionId.value;
-
-            console.log("Waiting for auction to complete");
-            await wait(waitTime);
-
-
-            let ts2 = invokeScript({
-                dApp: address(accounts.dappAddress),
-                    call:{
-                        function:"winnerWithdraw",
-                        args:[
-                            {type:"string",  value: auctionId }
-                        ]
-                    },
-                    payment:[],
-                    fee:500000
-
-            },accounts.buyerOne);
-            await expect(broadcast(ts2)).rejectedWith("Error while executing account-script: Nobody won this item");
-        });
-    });
-
 
 });

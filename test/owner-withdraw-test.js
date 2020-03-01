@@ -93,7 +93,7 @@ describe('Owner withdraw Testing', async function () {
             await waitForTx(tx.id);
         });
 
-        it("Owner withdraw before auction ends", async function ()  {
+        it("Prevent owner withdraw before auction ends", async function ()  {
 
             let ts = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -110,7 +110,7 @@ describe('Owner withdraw Testing', async function () {
             await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Auction is still running");
         });
 
-        it("Unauthorised access", async function ()  {
+        it("Prevent unauthorised access", async function ()  {
 
             let ts = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -127,7 +127,7 @@ describe('Owner withdraw Testing', async function () {
             await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Access Denied");
         });
 
-        it("Invalid auction Id", async function ()  {
+        it("Prevent invalid auction Id", async function ()  {
             auctionId = "foofoofooofoofoo"
             let ts = invokeScript({
                 dApp: address(accounts.dappAddress),
@@ -144,7 +144,7 @@ describe('Owner withdraw Testing', async function () {
             await expect(broadcast(ts)).rejectedWith("Error while executing account-script: Invalid auction Id");
         });
 
-        it("Withdraw amount already withrawn", async function ()  {
+        it("Prevent withdraw amount already withrawn", async function ()  {
 
             console.log("Waiting for auction to complete");
             //since auction duration is 1 min(60 sec)
@@ -209,7 +209,7 @@ describe('Owner withdraw Testing', async function () {
 
         });
 
-        it("withdraw item back when no bidder", async function ()  {
+        it("Withdraw item back when no bidder", async function ()  {
 
             console.log("Waiting for auction to complete");
             //since auction duration is 1 min(60 sec)
@@ -231,7 +231,7 @@ describe('Owner withdraw Testing', async function () {
             await waitForTx(tx.id);
         });
 
-        it("withdraw item already withdrawn when no bidder", async function ()  {
+        it("Prevent withdrawal of item already withdrawn when no bidder", async function ()  {
 
             console.log("Waiting for auction to complete");
             //since auction duration is 1 min(60 sec)
